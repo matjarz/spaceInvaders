@@ -1,8 +1,6 @@
 """
 Space Invaders Game
 """
-import os
-import pathlib
 import random
 import pygame
 import arcade
@@ -39,10 +37,6 @@ class Bullet(arcade.Sprite):
             self.remove_from_sprite_lists()
         if self.change_y < 0 and self.center_y < -self.height / 2:
             self.remove_from_sprite_lists()
-
-    def testDraw(self):
-        arcade.draw_rectangle_filled(self.center_x, self.center_y, self.width, self.height, arcade.color.RED)
-        arcade.draw_point(self.center_x - self.width/2, self.center_y - self.height/2, arcade.color.BLUE, 2)
 
 
 class Player(arcade.Sprite):
@@ -112,10 +106,6 @@ class Alien(arcade.Sprite):
 
     def too_low(self):
         return self.center_y - self.alien_height <= 100
-
-    def testDraw(self):
-        arcade.draw_rectangle_filled(self.center_x, self.center_y, self.width, self.height, arcade.color.RED)
-        arcade.draw_point(self.center_x - self.width / 2, self.center_y - self.height / 2, arcade.color.BLUE, 2)
 
 
 class MyGame(arcade.View):

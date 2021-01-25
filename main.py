@@ -13,6 +13,7 @@ SPRITE_SCALE_ALIENS = 1.5
 SPRITE_SCALE_SHIP = 1.5
 SPRITE_SCALE_BULLET = 0.5
 SPRITE_SCALE_SHIELD = 1
+SPRITE_SCALE_BONUS_ALIEN = 0.04
 RIGHT = 0
 LEFT = 1
 ALIEN_STEP = 5
@@ -20,6 +21,7 @@ HEIGHT_GAP = 0
 PLAYER_BULLET_SPEED = 500
 ALIEN_BULLET_SPEED = -350
 SHIELD_WIDTH = 100
+BONUS_ALIEN_CHANCE = 300
 
 
 class Bullet(arcade.Sprite):
@@ -67,6 +69,28 @@ class Player(arcade.Sprite):
             self.center_x = SCREEN_WIDTH - self.width/2
         if self.space_pressed:
             self.shoot_bullet()
+
+
+class BonusAlien(arcade.Sprite):
+    def __init__(self, filename, scale, dir):
+        super().__init__(filename, scale)
+        self.vel = 200
+        self.dir = dir
+        self.center_y = SCREEN_HEIGHT - 120
+        if dir == LEFT:
+            self.center_x = SCREEN_WIDTH + self.width/2
+        else:
+            self.center_x = -self.width / 2
+
+    def on_update(self, dt):
+        if self.dir == LEFT:
+            self.center_x -= self.vel * dt
+        else:
+            self.center_x += self.vel * dt
+        if self.center_x + self.width/2 < 0:
+            self.remove_from_sprite_lists()
+        elif self.center_x - self.width/2 > SCREEN_WIDTH:
+            self.remove_from_sprite_lists()
 
 
 class Alien(arcade.Sprite):
@@ -117,6 +141,7 @@ class MyGame(arcade.View):
         self.shield_sprite_list = None
         self.player_bullet_list = None
         self.alien_bullet_list = None
+        self.bonus_alien_list = None
         self.gap = None
         self.mixer = None
         self.swoosh_sound = None
@@ -126,12 +151,12 @@ class MyGame(arcade.View):
         self.alien_height = 0
         self.odds = 0
         self.frame = 0
-        self.score = 0
         self.lives = 0
 
     def alien_setup(self):
         # aliens setup
-        self.odds -= 20
+        if self.odds >= 20:
+            self.odds -= 20
         alien_template = arcade.Sprite("Resources/InvaderA_00.png", SPRITE_SCALE_ALIENS)
         width = SCREEN_WIDTH - alien_template.width * 4
         self.gap = (width - alien_template.width * 11) / 10
@@ -167,6 +192,7 @@ class MyGame(arcade.View):
         self.player_bullet_list = arcade.SpriteList()
         self.alien_bullet_list = arcade.SpriteList()
         self.shield_sprite_list = arcade.SpriteList()
+        self.bonus_alien_list = arcade.SpriteList()
 
         self.mixer = pygame.mixer
         self.mixer.init(channels=4)  # 0 - playershoot, 1 - alien swoosh, 2 - alien shoot
@@ -223,6 +249,7 @@ class MyGame(arcade.View):
         arcade.draw_rectangle_filled(SCREEN_WIDTH/2, SCREEN_HEIGHT - 50, SCREEN_WIDTH, 100, arcade.color.BLACK)
         arcade.draw_line(0, SCREEN_HEIGHT-100, SCREEN_WIDTH, SCREEN_HEIGHT-100, arcade.color.GREEN)
         arcade.draw_text("SCORE: " + str(self.window.score), 50, SCREEN_HEIGHT - 50, arcade.color.WHITE, 25)
+        self.bonus_alien_list.draw()
         # for bullet in self.player_bullet_list:
         #     bullet.testDraw()
         # for alien in self.alien_sprite_list:
@@ -233,6 +260,7 @@ class MyGame(arcade.View):
         self.player.on_update(dt)
         self.player_bullet_list.on_update(dt)
         self.alien_bullet_list.on_update(dt)
+        self.bonus_alien_list.on_update(dt)
 
         if self.frame > 50/(200 - 2 * len(self.alien_sprite_list)):  # random values
             self.alien_sprite_list.update()
@@ -262,10 +290,20 @@ class MyGame(arcade.View):
                 alien = self.alien_sprite_list[0]
                 alien.shoot_bullet()
 
+        bonus = random.randrange(0, BONUS_ALIEN_CHANCE, 1)
+        if bonus == 1:
+            bonus_alien = BonusAlien("Resources/bonus_spaceship.png", SPRITE_SCALE_BONUS_ALIEN, random.randrange(0,2,1))
+            self.bonus_alien_list.append(bonus_alien)
+
         for bullet in self.player_bullet_list:
             hit_list_alien = arcade.check_for_collision_with_list(bullet, self.alien_sprite_list)
             hit_list_alien_bullets = arcade.check_for_collision_with_list(bullet, self.alien_bullet_list)
             hit_list_shield = arcade.check_for_collision_with_list(bullet, self.shield_sprite_list)
+            hit_list_bonus_alien = arcade.check_for_collision_with_list(bullet, self.bonus_alien_list)
+            if len(hit_list_bonus_alien) > 0:
+                for bonus_alien in hit_list_bonus_alien:
+                    bonus_alien.remove_from_sprite_lists()
+                    self.window.score += 300
             if len(hit_list_shield) > 0:
                 for s in hit_list_shield:
                     s.remove_from_sprite_lists()
